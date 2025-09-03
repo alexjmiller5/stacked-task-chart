@@ -1,320 +1,161 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Task Graph</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.10/dayjs.min.js"></script>
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        #chart-container {
-            width: 100%;
-            height: 60vh;
-            min-height: 400px;
-        }
-    </style>
-</head>
-<body class="bg-gray-100 text-gray-800 p-4 md:p-8">
-
-    <div class="max-w-7xl mx-auto bg-white rounded-xl shadow-lg p-6">
-        <header class="mb-6 border-b pb-4">
-            <h1 class="text-3xl font-bold text-gray-900">Task Running Count Over Time</h1>
-            <p class="text-gray-600 mt-1">An interactive visualization of task completion and addition trends.</p>
-        </header>
-
-        <!-- Main Controls -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-            <div class="bg-gray-50 p-4 rounded-lg">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Category Type</label>
-                <div id="category-type-switcher" class="flex items-center space-x-2 bg-gray-200 p-1 rounded-md">
-                    <button data-type="project" class="category-btn flex-1 px-3 py-1.5 text-sm font-semibold rounded-md transition-colors">By Project</button>
-                    <button data-type="status" class="category-btn flex-1 px-3 py-1.5 text-sm font-semibold rounded-md transition-colors">By Status</button>
-                </div>
-            </div>
-
-            <div class="bg-gray-50 p-4 rounded-lg">
-                 <label class="block text-sm font-medium text-gray-700 mb-2">Date Range (Use ←/→ keys or scroll on chart)</label>
-                <div class="flex items-center space-x-2">
-                    <button id="prev-month" class="p-2 bg-gray-200 hover:bg-gray-300 rounded-md transition-colors" title="Previous Month (Shift+←)"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg></button>
-                    <input type="date" id="start-date" class="w-full p-2 border border-gray-300 rounded-md">
-                    <span class="text-gray-500">-</span>
-                    <input type="date" id="end-date" class="w-full p-2 border border-gray-300 rounded-md">
-                    <button id="next-month" class="p-2 bg-gray-200 hover:bg-gray-300 rounded-md transition-colors" title="Next Month (Shift+→)"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg></button>
-                </div>
-            </div>
-
-            <div id="category-filter-container" class="bg-gray-50 p-4 rounded-lg">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Filter Categories</label>
-                <div id="category-filter" class="grid grid-cols-2 gap-2 max-h-24 overflow-y-auto">
-                    <!-- Checkboxes will be dynamically inserted here -->
-                </div>
-            </div>
-        </div>
-
-        <div id="chart-container" class="rounded-lg"></div>
-    </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // --- DOM ELEMENT REFERENCES ---
-            const chartContainer = document.getElementById('chart-container');
-            const categoryTypeSwitcher = document.getElementById('category-type-switcher');
-            const categoryFilterContainer = document.getElementById('category-filter');
-            const startDateInput = document.getElementById('start-date');
-            const endDateInput = document.getElementById('end-date');
-
-            const myChart = echarts.init(chartContainer);
-            let rawData = [];
-
-            // --- STATE MANAGEMENT ---
-            let state = {
-                categoryType: 'project', // 'project' or 'status'
-                dateRange: {
-                    start: dayjs().subtract(3, 'month').format('YYYY-MM-DD'),
-                    end: dayjs().format('YYYY-MM-DD')
-                },
-                selectedCategories: new Set(),
-                allProjects: [],
-                allStatuses: []
-            };
-
-            // --- MOCK DATA GENERATION ---
-            function generateMockData() {
-                const projects = ['Website Redesign', 'Mobile App', 'API Integration', 'Marketing Campaign'];
-                const statuses = ['Backlog', 'In Progress', 'In Review', 'Done'];
-                state.allProjects = projects;
-                state.allStatuses = statuses;
-
-                const data = [];
-                let runningCount = 50;
-                const startDate = dayjs().subtract(1, 'year');
-
-                for (let i = 0; i < 365; i++) {
-                    const currentDate = startDate.add(i, 'day').format('YYYY-MM-DD');
-                    const dailyChange = Math.floor(Math.random() * 11) - 5; // -5 to +5
-                    runningCount = Math.max(10, runningCount + dailyChange);
-
-                    const tasks = {};
-                    let tempCount = runningCount;
-                    
-                    // Distribute tasks among projects
-                    const projectCounts = {};
-                    let remainingProjects = [...projects];
-                    for(let j = 0; j < projects.length - 1; j++) {
-                        const assigned = Math.floor(Math.random() * tempCount * 0.5);
-                        const proj = remainingProjects.splice(Math.floor(Math.random() * remainingProjects.length), 1)[0];
-                        projectCounts[proj] = assigned;
-                        tempCount -= assigned;
-                    }
-                    projectCounts[remainingProjects[0]] = tempCount;
-
-                    // Distribute tasks among statuses
-                    tempCount = runningCount;
-                    const statusCounts = {};
-                    let remainingStatuses = [...statuses];
-                     for(let j = 0; j < statuses.length - 1; j++) {
-                        const assigned = Math.floor(Math.random() * tempCount * 0.5);
-                        const stat = remainingStatuses.splice(Math.floor(Math.random() * remainingStatuses.length), 1)[0];
-                        statusCounts[stat] = assigned;
-                        tempCount -= assigned;
-                    }
-                    statusCounts[remainingStatuses[0]] = tempCount;
-                    
-                    data.push({
-                        date: currentDate,
-                        total: runningCount,
-                        ...projectCounts,
-                        ...statusCounts
-                    });
-                }
-                return data;
-            }
-
-            // --- DATA PROCESSING ---
-            function processData() {
-                const categories = state.categoryType === 'project' ? state.allProjects : state.allStatuses;
-                // Initialize selected categories if empty
-                if (state.selectedCategories.size === 0) {
-                     categories.forEach(cat => state.selectedCategories.add(cat));
-                }
-
-                const series = categories
-                    .filter(cat => state.selectedCategories.has(cat))
-                    .map(category => ({
-                        name: category,
-                        type: 'line',
-                        stack: 'Total', // This creates the stacked area chart
-                        areaStyle: {},
-                        emphasis: {
-                            focus: 'series'
-                        },
-                        smooth: true,
-                        data: rawData.map(d => [d.date, d[category] || 0])
-                    }));
-                
-                return { dates: rawData.map(d => d.date), categories, series };
-            }
-
-
-            // --- UI RENDERING & EVENT LISTENERS ---
-            function updateCategoryFilterUI() {
-                const categories = state.categoryType === 'project' ? state.allProjects : state.allStatuses;
-                categoryFilterContainer.innerHTML = ''; // Clear previous checkboxes
-                categories.forEach(cat => {
-                    const isChecked = state.selectedCategories.has(cat);
-                    const div = document.createElement('div');
-                    div.className = 'flex items-center';
-                    div.innerHTML = `
-                        <input id="cat-${cat}" type="checkbox" ${isChecked ? 'checked' : ''} data-category="${cat}" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                        <label for="cat-${cat}" class="ml-2 block text-sm text-gray-900 truncate">${cat}</label>
-                    `;
-                    categoryFilterContainer.appendChild(div);
-                });
-            }
-
-            function updateActiveCategoryButton() {
-                document.querySelectorAll('.category-btn').forEach(btn => {
-                    const isSelected = btn.dataset.type === state.categoryType;
-                    btn.classList.toggle('bg-blue-500', isSelected);
-                    btn.classList.toggle('text-white', isSelected);
-                    btn.classList.toggle('bg-gray-200', !isSelected);
-                    btn.classList.toggle('text-gray-700', !isSelected);
-                });
-            }
-
-            function updateDateInputs() {
-                startDateInput.value = state.dateRange.start;
-                endDateInput.value = state.dateRange.end;
-            }
-
-            function renderChart() {
-                const { series } = processData();
-
-                updateCategoryFilterUI();
-                updateActiveCategoryButton();
-                updateDateInputs();
-
-                myChart.setOption({
-                    tooltip: {
-                        trigger: 'axis',
-                        axisPointer: { type: 'cross' }
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
                     },
-                    legend: {
-                        data: series.map(s => s.name),
-                        top: 10,
-                        type: 'scroll'
-                    },
-                    grid: {
-                        left: '3%',
-                        right: '4%',
-                        bottom: '15%',
-                        containLabel: true
-                    },
-                    xAxis: [{
-                        type: 'time',
-                        boundaryGap: false,
-                    }],
-                    yAxis: [{
-                        type: 'value',
-                        name: 'Total Tasks'
-                    }],
-                    dataZoom: [
-                        {
-                            type: 'inside', // Enables scroll/trackpad zooming
-                            startValue: state.dateRange.start,
-                            endValue: state.dateRange.end
-                        },
-                        {
-                            type: 'slider', // The draggable slider at the bottom
-                            startValue: state.dateRange.start,
-                            endValue: state.dateRange.end,
-                            bottom: 10
-                        }
-                    ],
-                    series: series
-                }, { notMerge: true }); // notMerge is important for dynamic data
+                }
             }
-            
-            // --- EVENT HANDLER SETUP ---
-            
-            categoryTypeSwitcher.addEventListener('click', (e) => {
-                if (e.target.tagName === 'BUTTON') {
-                    state.categoryType = e.target.dataset.type;
-                    state.selectedCategories.clear(); // Reset filter when switching type
-                    renderChart();
-                }
-            });
-
-            categoryFilterContainer.addEventListener('change', (e) => {
-                if (e.target.type === 'checkbox') {
-                    const category = e.target.dataset.category;
-                    if (e.target.checked) {
-                        state.selectedCategories.add(category);
-                    } else {
-                        state.selectedCategories.delete(category);
-                    }
-                    renderChart();
-                }
-            });
-
-            startDateInput.addEventListener('change', () => {
-                state.dateRange.start = startDateInput.value;
-                renderChart();
-            });
-            endDateInput.addEventListener('change', () => {
-                state.dateRange.end = endDateInput.value;
-                renderChart();
-            });
-            
-            function shiftDateRange(amount, unit) {
-                state.dateRange.start = dayjs(state.dateRange.start).add(amount, unit).format('YYYY-MM-DD');
-                state.dateRange.end = dayjs(state.dateRange.end).add(amount, unit).format('YYYY-MM-DD');
-                renderChart();
-            }
-
-            document.getElementById('prev-month').addEventListener('click', () => shiftDateRange(-1, 'month'));
-            document.getElementById('next-month').addEventListener('click', () => shiftDateRange(1, 'month'));
-
-            // Keyboard shortcuts for date shifting
-            document.addEventListener('keydown', (e) => {
-                // Check if focus is on an input field to avoid overriding typing
-                if (document.activeElement.tagName === 'INPUT') return;
-
-                if (e.key === 'ArrowLeft') {
-                    shiftDateRange(e.shiftKey ? -1 : -7, e.shiftKey ? 'month' : 'day');
-                } else if (e.key === 'ArrowRight') {
-                    shiftDateRange(e.shiftKey ? 1 : 7, e.shiftKey ? 'month' : 'day');
-                }
-            });
-            
-             myChart.on('datazoom', function () {
-                // Get the current start and end values from the chart's model
-                const model = myChart.getModel();
-                const axis = model.getComponent('xAxis', 0).axis;
-                const [start, end] = axis.scale.getExtent();
-                
-                const newStart = dayjs(start).format('YYYY-MM-DD');
-                const newEnd = dayjs(end).format('YYYY-MM-DD');
-                
-                // Update state and inputs only if the date has actually changed
-                if (newStart !== state.dateRange.start || newEnd !== state.dateRange.end) {
-                    state.dateRange.start = newStart;
-                    state.dateRange.end = newEnd;
-                    updateDateInputs();
-                }
-            });
-
-            window.addEventListener('resize', () => myChart.resize());
-            
-            // --- INITIALIZATION ---
-            rawData = generateMockData();
-            renderChart();
-        });
+        }
     </script>
-</body>
-</html>
 
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="bg-gray-50 text-gray-800 antialiased">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <main class="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
+            <header class="mb-8 border-b border-gray-200 pb-6">
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Task Running Count Over Time
+                </h1>
+                <p class="text-gray-500 mt-2 text-sm sm:text-base">An interactive visualization of your Notion task
+                    trends.</p>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+
+                <div class="bg-gray-100/60 p-4 rounded-xl">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Group By</label>
+                    <div id="group-by-switcher" class="flex items-center space-x-2 bg-gray-200 p-1 rounded-lg">
+                        <button data-group="tag"
+                            class="group-by-btn flex-1 px-3 py-1.5 text-sm font-semibold rounded-md transition-colors">Tag</button>
+                        <button data-group="dueDate"
+                            class="group-by-btn flex-1 px-3 py-1.5 text-sm font-semibold rounded-md transition-colors">Due
+                            Date</button>
+                    </div>
+                </div>
+
+                <div class="bg-gray-100/60 p-4 rounded-xl">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex-1 grid grid-cols-2 items-center gap-2 min-w-[240px]">
+                            <input type="date" id="start-date"
+                                class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <input type="date" id="end-date"
+                                class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="prev-month"
+                                class="p-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
+                                title="Previous Month (Shift+←)">
+                                <svg class="h-5 w-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 19l-7-7 7-7" />
+                                </svg>
+                            </button>
+                            <button id="next-month"
+                                class="p-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
+                                title="Next Month (Shift+→)">
+                                <svg class="h-5 w-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-100/60 p-4 rounded-xl space-y-4">
+                    <div id="tag-filter-container" class="relative">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Filter Tags</label>
+                        <button type="button" id="tag-dropdown-button"
+                            class="inline-flex justify-between w-full rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-indigo-500">
+                            <span id="tag-dropdown-label">All Tags</span>
+                            <svg class="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                                fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd"
+                                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                        <div id="tag-dropdown-panel"
+                            class="origin-top-right absolute right-0 mt-2 w-full rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden z-20 max-h-60 overflow-y-auto">
+                            <div class="py-1" id="tag-list-container"></div>
+                        </div>
+                    </div>
+                    <div id="status-filter-container" class="relative">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Filter by Due Date Status</label>
+                        <button type="button" id="status-dropdown-button"
+                            class="inline-flex justify-between w-full rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-indigo-500">
+                            <span id="status-dropdown-label">All Statuses</span>
+                            <svg class="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                                fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd"
+                                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                        <div id="status-dropdown-panel"
+                            class="origin-top-right absolute right-0 mt-2 w-full rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden z-20 max-h-60 overflow-y-auto">
+                            <div class="py-1" id="status-list-container"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-100/60 p-4 rounded-xl">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Options</label>
+                    <div class="space-y-3 pt-2">
+                        <div class="flex items-center">
+                            <input id="include-incomplete-toggle" type="checkbox" checked
+                                class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <label for="include-incomplete-toggle"
+                                class="ml-2 block text-sm font-medium text-gray-900">Include Incomplete Tasks</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input id="legacy-view-toggle" type="checkbox"
+                                class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <label for="legacy-view-toggle" class="ml-2 block text-sm font-medium text-gray-900">Legacy
+                                View</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="chart-container" class="rounded-lg relative">
+                <div id="loader-container"
+                    class="absolute inset-0 bg-white/75 backdrop-blur-sm flex flex-col items-center justify-center z-10 rounded-lg">
+                    <div id="loader"></div>
+                    <p class="mt-4 text-gray-600 font-semibold">Fetching data from Notion...</p>
+                </div>
+                <div id="error-message"
+                    class="absolute inset-0 bg-red-50 border-2 border-red-200 flex-col items-center justify-center z-10 hidden p-4 text-center rounded-lg">
+                    <h3 class="text-lg font-bold text-red-800" id="error-title">Failed to Load Data</h3>
+                    <p class="text-red-700 mt-2" id="error-details">Could not fetch data from Notion.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
