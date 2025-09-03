@@ -61,3 +61,4 @@ zsh: terminated  ./startup.sh
 - Add more documentation about how the caching works
 - Instead of just overdue could add a "Due" tag that shows tasks that are due today. Could be interesting to see how many tasks are due each day relative to time
 - Could change Undated to be "No Due Date" - sounds a little better and more consistent I think
+- Could add vertical lines with important life events that make me more busy and less busy (and inherently affect my task count by allowing it to build up and tasks not be completed - things like moving into a new apartment, breaking my knee, starting a semester of BU, starting my new job, going to Asia etc.)
