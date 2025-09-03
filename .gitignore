@@ -1,0 +1,4 @@
+.env.local
+venv/
+notion-cache.json
+.DS_Store
