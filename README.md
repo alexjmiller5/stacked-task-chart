@@ -59,3 +59,5 @@ zsh: terminated  ./startup.sh
 - Add more instructions on how to use the app and how it actually works - the best ways to view tasks, interesteing observations - how to itnerpret the data bascially
 - Add more comments to the code
 - Add more documentation about how the caching works
+- Instead of just overdue could add a "Due" tag that shows tasks that are due today. Could be interesting to see how many tasks are due each day relative to time
+- Could change Undated to be "No Due Date" - sounds a little better and more consistent I think
