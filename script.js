@@ -2,6 +2,9 @@ document.addEventListener('DOMContentLoaded', async function () {
   // --- Element Cache ---
   const chartContainer = document.getElementById('chart-container');
   const loaderContainer = document.getElementById('loader-container');
+  const errorMessage = document.getElementById('error-message'); // Get error div
+  const errorDetails = document.getElementById('error-details'); // Get error text span
+  
   const groupBySwitcher = document.getElementById('group-by-switcher');
   const startDateInput = document.getElementById('start-date');
   const endDateInput = document.getElementById('end-date');
@@ -30,7 +33,7 @@ document.addEventListener('DOMContentLoaded', async function () {
   let minDate = dayjs().startOf('day');
 
   let state = {
-    groupBy: 'tag', // 'tag' or 'dueDate'
+    groupBy: 'tag',
     dateRange: { start: dayjs().subtract(3, 'month').format('YYYY-MM-DD'), end: dayjs().format('YYYY-MM-DD') },
     selectedTags: new Set(),
     selectedDueDateStatuses: new Set(),
@@ -43,7 +46,7 @@ document.addEventListener('DOMContentLoaded', async function () {
   includeLegacyToggle.checked = state.includeLegacyTasks;
 
   // --- Core Data Processing Functions ---
-
+  // (Keep your existing processing logic exactly the same)
   function getCalculationLimitDate() {
     const today = dayjs().format('YYYY-MM-DD');
     const viewEndDate = state.dateRange.end;
@@ -282,8 +285,12 @@ document.addEventListener('DOMContentLoaded', async function () {
   }
 
   function processAndRender(pages) {
-    if (!pages || pages.length === 0) return;
+    if (!pages || pages.length === 0) {
+        showError('No data found in cache or API response.');
+        return;
+    }
     loaderContainer.classList.add('hidden');
+    errorMessage.classList.add('hidden'); // Hide error if success
     allFetchedPages = pages;
 
     prepareTasksAndEvents(allFetchedPages);
@@ -293,6 +300,14 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     rawData = calculateRawData(getCalculationLimitDate());
     renderChart();
+  }
+  
+  // New helper to handle errors in UI
+  function showError(msg) {
+      loaderContainer.classList.add('hidden');
+      errorMessage.classList.remove('hidden');
+      errorMessage.classList.add('flex'); // Ensure flex display works
+      errorDetails.textContent = msg;
   }
 
   function debounce(func, timeout = 300) {
@@ -392,11 +407,39 @@ document.addEventListener('DOMContentLoaded', async function () {
   window.addEventListener('resize', () => myChart.resize());
 
   // --- Initial Data Fetch ---
-  fetch('http://127.0.0.1:5000/api/cached-data').then(res => res.json()).then(cachedPages => {
-    if (cachedPages && cachedPages.length > 0) processAndRender(cachedPages);
-  }).catch(err => console.error('Error fetching cached data:', err));
-
-  fetch('http://127.0.0.1:5000/api/refresh-data').then(res => res.json()).then(freshPages => {
-    if (freshPages && freshPages.length > 0) processAndRender(freshPages);
-  }).catch(err => console.error('Error fetching fresh data:', err));
+  // Try cache first
+  fetch('http://127.0.0.1:5000/api/cached-data')
+    .then(res => {
+        if (!res.ok) throw new Error(`Cache Status: ${res.status}`);
+        return res.json();
+    })
+    .then(cachedPages => {
+      if (cachedPages && cachedPages.length > 0) {
+        processAndRender(cachedPages);
+      }
+      // Regardless of cache, fetch fresh data
+      return fetch('http://127.0.0.1:5000/api/refresh-data');
+    })
+    .then(res => {
+        if (!res.ok) throw new Error(`API Status: ${res.status} - Check Server Logs`);
+        return res.json();
+    })
+    .then(freshPages => {
+      // If we have an error object from Flask (e.g. 500 error)
+      if (freshPages.error) {
+          throw new Error(freshPages.error);
+      }
+      if (freshPages && freshPages.length > 0) {
+        processAndRender(freshPages);
+      } else {
+        showError("Data fetched but list is empty.");
+      }
+    })
+    .catch(err => {
+      console.error('Data Fetch Error:', err);
+      // Only show error in UI if we haven't rendered anything yet
+      if (allFetchedPages.length === 0) {
+          showError(`Failed to load data: ${err.message}`);
+      }
+    });
 });
