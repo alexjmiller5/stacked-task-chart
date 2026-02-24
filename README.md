@@ -44,23 +44,6 @@ DATABASE_ID=your_notion_database_id
 
 These secrets are required for the backend API to fetch data from Notion.
 
-## TODO
+## Project Tasks
 
-- Verify that the changelog history works correctly for due date and tag history - I haven't tested it at all
-- Get rid of the shutdown warning caused by the startup script:
-
-```sh
-^CShutting down servers...
-zsh: terminated  ./startup.sh
-/opt/homebrew/Cellar/python@3.13/3.13.5/Frameworks/Python.framework/Versions/3.13/lib/python3.13/multiprocessing/resource_tracker.py:301: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown: {'/mp-lzbnti83'}
-  warnings.warn(
-```
-
-- Add more instructions on how to use the app and how it actually works - the best ways to view tasks, interesteing observations - how to itnerpret the data bascially
-- Add more comments to the code
-- Add more documentation about how the caching works
-- Instead of just overdue could add a "Due" tag that shows tasks that are due today. Could be interesting to see how many tasks are due each day relative to time
-- Could change Undated to be "No Due Date" - sounds a little better and more consistent I think
-- Could add vertical lines with important life events that make me more busy and less busy (and inherently affect my task count by allowing it to build up and tasks not be completed - things like moving into a new apartment, breaking my knee, starting a semester of BU, starting my new job, going to Asia etc.)
-- Rewrite this entire graph with a dashboarding application so that I don't have to handle the UI (my current js solution isn't perfect because I'm not a big frontend guy). There are options where I just provide the data and it handles the UI and graphing for me. Would be a lot cleaner and easier to maintain. Here's a gemini chat where I asked it to help me find the proper libraries for what I'm looking for: <https://gemini.google.com/app/3d0fffb5dd4a3e41>
-- refactor to use the new tags system in combination with the old tags system cause the old tags were pretty filled up
+See project tasks and roadmap in Notion.
