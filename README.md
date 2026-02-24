@@ -43,7 +43,3 @@ DATABASE_ID=your_notion_database_id
 - `TASKS_DATABASE_ID`: The ID of your Notion database.
 
 These secrets are required for the backend API to fetch data from Notion.
-
-## Project Tasks
-
-See project tasks and roadmap in Notion.
